@@ -1,0 +1,1049 @@
+[
+    {
+        "id": "auth",
+        "category": "Authentication",
+        "icon": "ShieldCheck",
+        "color": "#ef4444",
+        "items": [
+            {
+                "id": "auth-vs-authz",
+                "label": "Auth vs Authz",
+                "question": "What is the difference between authentication and authorization?",
+                "answer": "Authentication (AuthN) = proving who you are — login, identity verification. Authorization (AuthZ) = what you are allowed to do — permissions, roles. AuthN always comes first; AuthZ checks follow. They are separate concerns and should be enforced independently.",
+                "strongSignals": [
+                    "Clearly separates identity from permissions",
+                    "Gives a real example — JWT claims vs RBAC roles",
+                    "Mentions they must be enforced independently on every request",
+                    "Knows AuthN failure returns 401, AuthZ failure returns 403"
+                ],
+                "redFlags": [
+                    "Confuses or conflates the two concepts",
+                    "Cannot give a concrete example",
+                    "Thinks only the frontend needs to check permissions"
+                ]
+            },
+            {
+                "id": "jwt-lifecycle",
+                "label": "JWT lifecycle",
+                "question": "Walk me through the lifecycle of a JWT token from creation to expiry.",
+                "answer": "Server creates a JWT with claims (sub, exp, roles), signs it with a secret or private key, and returns it. Client stores it (memory or HttpOnly cookie), attaches it to each request via Authorization header. Server validates the signature and expiry on every request — no session lookup needed. On expiry the refresh token flow issues a new access token.",
+                "strongSignals": [
+                    "Mentions signing algorithm (HS256 vs RS256) and why",
+                    "Knows JWTs are stateless — no server-side session storage",
+                    "Understands access token vs refresh token separation",
+                    "Aware of revocation challenges (short TTL, token blacklist)"
+                ],
+                "redFlags": [
+                    "Thinks JWT = session cookie",
+                    "Does not mention expiry or revocation",
+                    "Would store JWT in localStorage without noting XSS risk"
+                ]
+            },
+            {
+                "id": "oauth2-flows",
+                "label": "OAuth2 flows",
+                "question": "Which OAuth2 flow would you use for a web app versus a mobile app, and why?",
+                "answer": "Web app (server-side): Authorization Code flow — server exchanges code for tokens server-side, client secret stays secure. Mobile/SPA: Authorization Code + PKCE — no client secret; code verifier prevents interception. Never use the Implicit flow — it returns tokens in the URL and is deprecated by RFC 9700.",
+                "strongSignals": [
+                    "Names PKCE and explains why it replaces Implicit for SPAs",
+                    "Understands that client secrets cannot be stored safely in browsers",
+                    "Knows the difference between authorization code and access token",
+                    "Mentions state parameter for CSRF protection"
+                ],
+                "redFlags": [
+                    "Would use Implicit flow for a SPA",
+                    "Does not know what PKCE stands for or does",
+                    "Puts client secret in frontend code"
+                ]
+            },
+            {
+                "id": "multi-tenant-access",
+                "label": "Multi-tenant access",
+                "question": "How do you prevent one tenant from reading or modifying another tenant's data?",
+                "answer": "Attach tenant_id to every DB query as a mandatory, non-optional filter. Store tenant_id in the JWT claims — never accept it from the request body. Validate at the API layer that the authenticated user's tenant matches the resource's tenant. Test with a dedicated security test: log in as Tenant A and attempt to access Tenant B's record — it must 403.",
+                "strongSignals": [
+                    "Treats tenant_id as a DB-level filter on every query, not optional",
+                    "Derives tenant from JWT, never from client-supplied input",
+                    "Has a test that proves cross-tenant access is blocked",
+                    "Mentions row-level security in the DB as an extra layer"
+                ],
+                "redFlags": [
+                    "Relies only on frontend to show the right tenant's data",
+                    "Accepts tenant_id from request body without verifying JWT",
+                    "Has no automated test covering cross-tenant access"
+                ]
+            }
+        ]
+    },
+    {
+        "id": "fe",
+        "category": "Front End",
+        "icon": "Layout",
+        "color": "#f97316",
+        "items": [
+            {
+                "id": "component-architecture",
+                "label": "Component architecture",
+                "question": "How do you decide when to split a React component into smaller ones?",
+                "answer": "Split when a component does more than one thing, when logic can be reused elsewhere, when it grows past ~150 lines, or when testing it requires setting up too much unrelated state. Each component should have a single clear responsibility. Do not split for splitting's sake — premature decomposition adds complexity.",
+                "strongSignals": [
+                    "Mentions single responsibility as the primary guide",
+                    "Talks about reusability as a reason, not just length",
+                    "Warns against over-splitting and prop-drilling hell",
+                    "Thinks about testability when deciding boundaries"
+                ],
+                "redFlags": [
+                    "Splits purely based on line count",
+                    "Creates many tiny components with no clear purpose",
+                    "Has never refactored a large component that grew too big"
+                ]
+            },
+            {
+                "id": "state-management",
+                "label": "State management",
+                "question": "When would you use local component state versus global state?",
+                "answer": "Local state for UI-only concerns — modal open/close, form input values, hover states. Global state for data shared across multiple routes or components — user session, shopping cart, notifications. The rule: do not lift state higher than it needs to be. Start local, lift only when a second unrelated component needs it.",
+                "strongSignals": [
+                    "Defaults to local state first, lifts only when needed",
+                    "Distinguishes UI state from server/domain state",
+                    "Knows when to use React Query / SWR instead of global state for server data",
+                    "Understands the cost of global state — re-renders across the tree"
+                ],
+                "redFlags": [
+                    "Puts all state in a global store by default",
+                    "Uses Redux for a simple form with two fields",
+                    "Does not know what React Query or SWR is"
+                ]
+            },
+            {
+                "id": "rendering-strategies",
+                "label": "Rendering strategies",
+                "question": "What is the difference between SSR, SSG, and CSR, and when do you choose each?",
+                "answer": "SSR (Server-Side Rendering): HTML generated per request — good for dynamic, personalized data. SSG (Static Site Generation): HTML generated at build time — fastest, ideal for content that rarely changes. CSR (Client-Side Rendering): HTML rendered in the browser — needs JS, poor for SEO, best for highly interactive apps behind auth. Next.js lets you mix all three per page.",
+                "strongSignals": [
+                    "Knows SSG is fastest but stale without ISR or revalidation",
+                    "Understands SSR adds server load per request",
+                    "Mentions SEO and TTFB tradeoffs between the strategies",
+                    "Has used Next.js App Router or Pages Router to mix strategies"
+                ],
+                "redFlags": [
+                    "Cannot explain why CSR is bad for SEO",
+                    "Thinks SSR and SSG are the same thing",
+                    "Has never considered rendering strategy for a page"
+                ]
+            },
+            {
+                "id": "performance-tuning",
+                "label": "Performance tuning",
+                "question": "How would you debug and fix a slow or frequently re-rendering React component?",
+                "answer": "First profile with React DevTools Profiler to see what re-renders and why. Then apply targeted fixes: React.memo to prevent re-renders from unchanged props, useMemo for expensive computed values, useCallback for stable function references. Lazy-load heavy components with React.lazy + Suspense. Virtualize long lists with react-window or react-virtual.",
+                "strongSignals": [
+                    "Profiles before optimizing — never guesses",
+                    "Explains when memo/useMemo actually helps vs adds overhead",
+                    "Knows list virtualization for large datasets",
+                    "Has measured before/after with real numbers"
+                ],
+                "redFlags": [
+                    "Wraps everything in useMemo and memo without profiling",
+                    "Has never used React DevTools Profiler",
+                    "Thinks adding more CSS will fix rendering performance"
+                ]
+            }
+        ]
+    },
+    {
+        "id": "be",
+        "category": "Backend",
+        "icon": "Server",
+        "color": "#f59e0b",
+        "items": [
+            {
+                "id": "api-design",
+                "label": "API design",
+                "question": "What makes a REST API well-designed?",
+                "answer": "Consistent resource naming with nouns, not verbs (GET /users, not GET /getUsers). Correct HTTP verbs for intent. Proper status codes — 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 500 Internal Error. Versioning via URL (/api/v1/) or header. Structured, consistent error responses with a machine-readable code and human message.",
+                "strongSignals": [
+                    "Uses nouns for resources, verbs for actions only via HTTP methods",
+                    "Returns correct status codes — knows 401 vs 403 difference",
+                    "Has consistent error response shape across all endpoints",
+                    "Thinks about pagination, filtering, and field selection upfront"
+                ],
+                "redFlags": [
+                    "Uses GET for mutations (GET /deleteUser)",
+                    "Returns 200 for all responses including errors",
+                    "No versioning strategy — would break clients on every change"
+                ]
+            },
+            {
+                "id": "data-validation",
+                "label": "Data validation",
+                "question": "Where should you validate incoming data in a backend system?",
+                "answer": "At every boundary — defense in depth. API layer: validate request schema and types (Zod, Joi, class-validator). Service layer: enforce business rules (email must be unique, balance must not go negative). Database layer: NOT NULL, UNIQUE, CHECK constraints as the last line of defense. Never trust client data anywhere in the stack.",
+                "strongSignals": [
+                    "Knows validation is needed at every layer, not just the API",
+                    "Uses a schema library (Zod, Joi) for request validation",
+                    "Adds DB constraints as a safety net",
+                    "Returns structured validation error messages with field names"
+                ],
+                "redFlags": [
+                    "Only validates on the frontend",
+                    "Trusts that the database will catch everything",
+                    "Has no input validation at all — assumes correct data"
+                ]
+            },
+            {
+                "id": "error-handling",
+                "label": "Error handling",
+                "question": "How should a REST API handle and communicate errors consistently?",
+                "answer": "Return structured JSON with a machine-readable error code, a human message, and optional details or field-level errors. Use correct HTTP status codes. Log the full stack trace server-side with a correlation/request ID. Return only a sanitized message to the client — never expose internal paths, DB errors, or stack traces. Centralize error handling in a middleware so every route follows the same pattern.",
+                "strongSignals": [
+                    "Has a single error-handling middleware / global handler",
+                    "Differentiates operational errors (400s) from programmer bugs (500s)",
+                    "Logs full error server-side, returns safe message to client",
+                    "Includes a request ID so logs and client errors can be correlated"
+                ],
+                "redFlags": [
+                    "Returns raw DB error messages to the client",
+                    "Uses 500 for validation failures",
+                    "No correlation ID — cannot trace client errors in server logs"
+                ]
+            },
+            {
+                "id": "service-ownership",
+                "label": "Service ownership",
+                "question": "What does it mean to truly own a backend service?",
+                "answer": "You are responsible for its uptime, performance, and on-call response. You know its upstream dependencies and what breaks when they do. You maintain clear data contracts for consumers. You write and keep runbooks current. You track error rates and latency in production — not just on deploy day. You care about it after it ships.",
+                "strongSignals": [
+                    "Has actually been on-call for a service they built",
+                    "Proactively monitors — not reactive only when PagerDuty fires",
+                    "Maintains a runbook and has used it in a real incident",
+                    "Knows the service's SLA/SLO and tracks it"
+                ],
+                "redFlags": [
+                    "Ships and forgets — no post-deploy monitoring",
+                    "Has never written a runbook",
+                    "Considers it done once the PR is merged"
+                ]
+            }
+        ]
+    },
+    {
+        "id": "arch",
+        "category": "Architecture",
+        "icon": "Network",
+        "color": "#14b8a6",
+        "items": [
+            {
+                "id": "system-architecture",
+                "label": "System architecture",
+                "question": "When would you choose microservices over a monolith?",
+                "answer": "Start with a monolith — it is easier to build, deploy, debug, and refactor. Move to microservices only when teams need to deploy independently, specific services need to scale separately, or the monolith's coupling creates real release bottlenecks. Microservices add distributed system complexity: network failures, distributed tracing, versioned contracts, and operational overhead. Do not pay that cost until you need to.",
+                "strongSignals": [
+                    "Defaults to monolith first — does not cargo-cult microservices",
+                    "Cites team autonomy and independent scalability as real drivers",
+                    "Acknowledges the operational complexity cost of microservices",
+                    "Has experience migrating between the two"
+                ],
+                "redFlags": [
+                    "Says microservices are always better",
+                    "Cannot name the actual problems microservices solve",
+                    "Has never dealt with distributed system failure modes"
+                ]
+            },
+            {
+                "id": "project-planning",
+                "label": "Project planning",
+                "question": "How do you break down a large feature before writing any code?",
+                "answer": "Define the inputs, outputs, and success criteria first. Identify data models, API contracts, and downstream dependencies. List unknowns and create spikes for the riskiest ones. Slice into vertical increments that each ship a testable slice of value. Estimate in days, not hours. Create a simple sequence diagram or decision doc so the team can review before implementation starts.",
+                "strongSignals": [
+                    "Starts with requirements and success criteria, not code",
+                    "Identifies unknowns early and time-boxes spikes",
+                    "Writes down the design before implementing — ADR or RFC",
+                    "Delivers in vertical slices so feedback comes early"
+                ],
+                "redFlags": [
+                    "Dives into code without defining requirements",
+                    "Has never written a design doc or RFC",
+                    "Delivers everything at the end as one big bang"
+                ]
+            },
+            {
+                "id": "documentation",
+                "label": "Documentation",
+                "question": "What documentation do you keep updated for services you own?",
+                "answer": "README with setup, environment variables, and run instructions. API contract or OpenAPI/Swagger spec. Architecture Decision Records (ADRs) explaining why key choices were made — not just what. Runbook for common production issues. Data dictionary for non-obvious schema fields. Update docs as part of the PR — if the code changed, the docs change too.",
+                "strongSignals": [
+                    "Writes ADRs — captures the 'why', not just the 'what'",
+                    "Keeps a runbook that a new on-call engineer can follow",
+                    "Treats documentation updates as part of the definition of done",
+                    "Has onboarded someone new using their own documentation"
+                ],
+                "redFlags": [
+                    "Has no runbook — 'just ask me'",
+                    "Never writes design docs before implementation",
+                    "Documentation exists only as comments in code"
+                ]
+            }
+        ]
+    },
+    {
+        "id": "lead",
+        "category": "Leadership",
+        "icon": "Users",
+        "color": "#eab308",
+        "items": [
+            {
+                "id": "technical-decisions",
+                "label": "Technical decisions",
+                "question": "How do you make a technical decision when the team disagrees?",
+                "answer": "Gather the requirements and constraints clearly first — many disagreements dissolve when the problem is defined precisely. Evaluate each option against those constraints explicitly. Time-box the debate. Make a clear, documented decision with written rationale. Disagree and commit — once the decision is made, everyone rows the same direction. Revisit in a sprint if it turns out to be wrong.",
+                "strongSignals": [
+                    "Separates problem definition from solution selection",
+                    "Uses written decision docs (ADR) so reasoning is reviewable",
+                    "Applies 'disagree and commit' — does not let debate drag on",
+                    "Creates reversibility where possible to reduce the cost of being wrong"
+                ],
+                "redFlags": [
+                    "Lets debate run indefinitely with no resolution",
+                    "Makes decisions by seniority alone, not evidence",
+                    "Cannot give an example of a decision they led"
+                ]
+            },
+            {
+                "id": "code-quality-standards",
+                "label": "Code quality standards",
+                "question": "How do you maintain high code quality across a team?",
+                "answer": "Automated enforcement: linting, formatting, and type checking in CI on every PR. Code review with a clear checklist. Pair programming for complex features or onboarding. Regular refactoring allocated in sprint planning — not treated as a favor. Lead by example: the quality of your own PRs sets the bar for the team.",
+                "strongSignals": [
+                    "Automates style enforcement — humans review logic, not formatting",
+                    "Has a written definition of done that includes quality criteria",
+                    "Allocates explicit sprint capacity for tech debt",
+                    "Demonstrates quality in their own PRs, not just enforces it"
+                ],
+                "redFlags": [
+                    "Code quality is 'just vibes' — no standards written down",
+                    "Pushes all quality checks to post-merge",
+                    "Reviews focus on style, never on logic or edge cases"
+                ]
+            },
+            {
+                "id": "mentorship",
+                "label": "Mentorship",
+                "question": "Tell me how you have helped a junior engineer grow.",
+                "answer": "Pair with them on real tasks — not toy exercises. Give specific, actionable PR feedback: name the problem, explain why it matters, suggest how to fix it. Assign stretch tasks slightly beyond their current level with a safety net. Check in weekly on blockers, not just on deliverables. Celebrate their wins publicly. Progressively give them more autonomy as they earn it.",
+                "strongSignals": [
+                    "Has a concrete example with a specific outcome",
+                    "Gives feedback on real code — not vague praise",
+                    "Gives junior engineers real ownership, not just cleanup tasks",
+                    "Tracks their growth intentionally, not just notices it happened"
+                ],
+                "redFlags": [
+                    "Cannot give a specific mentorship example",
+                    "Mentorship = pointing at docs — no pairing, no feedback",
+                    "Does not give juniors meaningful work"
+                ]
+            },
+            {
+                "id": "delivery-ownership",
+                "label": "Delivery ownership",
+                "question": "What do you do when a deadline is at risk?",
+                "answer": "Surface it immediately — never surprise stakeholders at the last day. Quantify what is at risk and why. Propose options: scope down the MVP, extend the timeline, or add resources. Make a clear recommendation. Communicate in writing. The biggest failure is silence — a late warning given early is recoverable; a surprise on the due date is not.",
+                "strongSignals": [
+                    "Gives early warning — not the day before the deadline",
+                    "Quantifies scope and proposes concrete options",
+                    "Has a written status update habit",
+                    "Owns the problem, does not blame dependencies"
+                ],
+                "redFlags": [
+                    "Waits until the last minute to flag risk",
+                    "Has no update until someone asks",
+                    "Blames the tools or other teams without owning the outcome"
+                ]
+            }
+        ]
+    },
+    {
+        "id": "db",
+        "category": "Storage",
+        "icon": "Database",
+        "color": "#84cc16",
+        "items": [
+            {
+                "id": "schema-design",
+                "label": "Schema design",
+                "question": "How do you design a database schema for a new feature?",
+                "answer": "Start with business entities and their relationships. Normalize to 3NF to avoid data duplication — but denormalize intentionally where read performance demands it. Use UUIDs for primary keys. Add created_at and updated_at to every table. Add soft-delete with deleted_at rather than hard-delete when audit history matters. Design for your most frequent query patterns, not just the data model.",
+                "strongSignals": [
+                    "Starts with business entities, not just tables",
+                    "Knows normalization rules and when to break them intentionally",
+                    "Adds created_at / updated_at as default hygiene",
+                    "Designs with query patterns in mind from the start"
+                ],
+                "redFlags": [
+                    "Denormalizes by default without reason",
+                    "Uses string IDs or auto-increment integers only",
+                    "Never considers soft-delete or audit fields"
+                ]
+            },
+            {
+                "id": "indexing",
+                "label": "Indexing",
+                "question": "When do you add an index to a database column, and what are the tradeoffs?",
+                "answer": "Add indexes on columns used in WHERE, JOIN, and ORDER BY clauses that appear in slow or frequent queries. Tradeoffs: reads get faster, writes get slower because the index must be maintained. Over-indexing hurts write throughput. Use EXPLAIN or EXPLAIN ANALYZE to verify the query actually uses the index. Composite indexes follow the left-prefix rule — order matters.",
+                "strongSignals": [
+                    "Uses EXPLAIN before and after to verify index usage",
+                    "Knows that writes pay the cost of every index",
+                    "Understands composite index column order matters",
+                    "Has actually diagnosed a missing index in production"
+                ],
+                "redFlags": [
+                    "Adds indexes on every column 'just in case'",
+                    "Has never used EXPLAIN on a query",
+                    "Does not know what a composite index is"
+                ]
+            },
+            {
+                "id": "migrations",
+                "label": "Migrations",
+                "question": "What is your process for making a database schema change safely in production?",
+                "answer": "Write both up and down migrations. Test on staging with production-like data volume. Deploy the migration before the code change — never break the running API. For large tables, use non-blocking operations (CONCURRENTLY for indexes, avoid column-altering locks). Use a migration tool (Prisma Migrate, Flyway, Alembic). Never drop a column without a deprecation phase: stop writing, then stop reading, then drop.",
+                "strongSignals": [
+                    "Always writes a rollback migration",
+                    "Runs migrations before code deploy to avoid breakage",
+                    "Knows which operations lock tables on large datasets",
+                    "Follows a deprecation phase before dropping columns"
+                ],
+                "redFlags": [
+                    "Has no rollback migration",
+                    "Drops columns the same day code stops using them",
+                    "Has never worried about migration locking production tables"
+                ]
+            },
+            {
+                "id": "query-performance",
+                "label": "Query performance",
+                "question": "How do you find and fix a slow database query?",
+                "answer": "Enable the slow query log to surface queries over a threshold. Run EXPLAIN ANALYZE on the suspect query. Look for sequential scans on large tables — those need an index. Check for N+1 queries (one query per row in a loop) — fix with JOIN or eager loading. Avoid SELECT * — select only needed columns. Consider read replicas for heavy read workloads to separate read and write pressure.",
+                "strongSignals": [
+                    "Uses EXPLAIN ANALYZE, not just EXPLAIN",
+                    "Has debugged an N+1 query and fixed it",
+                    "Knows that SELECT * prevents index-only scans",
+                    "Has used a read replica or query cache to scale reads"
+                ],
+                "redFlags": [
+                    "Has never run EXPLAIN on a query",
+                    "Does not know what an N+1 query is",
+                    "Optimizes queries by guessing, not measuring"
+                ]
+            }
+        ]
+    },
+    {
+        "id": "sec",
+        "category": "Security",
+        "icon": "Lock",
+        "color": "#06b6d4",
+        "items": [
+            {
+                "id": "owasp-top-10",
+                "label": "OWASP Top 10",
+                "question": "Name three OWASP vulnerabilities and tell me how you prevent them.",
+                "answer": "Injection (SQL, XSS): use parameterized queries and output encoding — never interpolate user input into queries or HTML. Broken Authentication: short-lived JWTs, MFA, bcrypt for password hashing, rate-limit login attempts. Broken Access Control: enforce permissions server-side on every request, never rely on client-side checks. Bonus: Insecure Direct Object Reference (IDOR) — validate that the requesting user owns the resource they are accessing.",
+                "strongSignals": [
+                    "Gives concrete prevention — not just names the vulnerability",
+                    "Knows parameterized queries prevent SQL injection",
+                    "Understands that IDOR is a broken access control subtype",
+                    "Has found or fixed a real security issue in production"
+                ],
+                "redFlags": [
+                    "Can only name them, not prevent them",
+                    "Thinks input validation on the frontend is sufficient",
+                    "Does not know what IDOR stands for"
+                ]
+            },
+            {
+                "id": "secure-defaults",
+                "label": "Secure defaults",
+                "question": "What security defaults do you configure for a new web application?",
+                "answer": "HTTPS everywhere with HSTS. Secure, HttpOnly, SameSite=Strict cookies. Content-Security-Policy header to prevent XSS. X-Frame-Options to prevent clickjacking. Rate limiting on auth endpoints. CORS restricted to known origins. Environment variables for secrets — never hardcoded. Dependencies pinned and scanned for CVEs (Snyk, Dependabot).",
+                "strongSignals": [
+                    "Lists security headers as a baseline, not an afterthought",
+                    "Knows HttpOnly prevents JS from reading cookies",
+                    "Has configured CSP in a real app",
+                    "Automates dependency vulnerability scanning in CI"
+                ],
+                "redFlags": [
+                    "Security defaults = HTTPS only, nothing else",
+                    "Has never set a Content-Security-Policy",
+                    "Ships with wildcard CORS (*) in production"
+                ]
+            },
+            {
+                "id": "secrets-management",
+                "label": "Secrets management",
+                "question": "How do you handle secrets like API keys in a production application?",
+                "answer": "Never commit secrets to version control — use .env files excluded by .gitignore, or a secrets manager (AWS Secrets Manager, HashiCorp Vault, Doppler). Inject secrets as environment variables at deploy time. Rotate secrets on a schedule and immediately on personnel change. Audit who has access. Never log secrets — check your log output after adding new API calls.",
+                "strongSignals": [
+                    "Has never committed a secret to git — or caught and rotated one that slipped",
+                    "Uses a secrets manager beyond .env files for production",
+                    "Rotates secrets on a defined schedule",
+                    "Audits access and knows who holds each credential"
+                ],
+                "redFlags": [
+                    "Stores secrets in the repository",
+                    "Has no rotation policy",
+                    "Secrets are shared over Slack or email"
+                ]
+            },
+            {
+                "id": "least-privilege",
+                "label": "Least privilege",
+                "question": "What does the principle of least privilege mean in a real system?",
+                "answer": "Every user, service, and process gets only the minimum permissions needed to do its job — nothing more. DB user for the API can only SELECT/INSERT on the tables it needs, not DROP or DELETE. Service accounts cannot read other services' secrets. IAM roles scope tightly to needed actions and resources. Review permissions quarterly and remove what is no longer needed.",
+                "strongSignals": [
+                    "Creates separate DB users per service with scoped permissions",
+                    "Uses IAM roles with tight resource scopes",
+                    "Reviews and prunes permissions regularly",
+                    "Has caught over-permissioned accounts in a real audit"
+                ],
+                "redFlags": [
+                    "Every service connects to DB as root or admin",
+                    "Has never reviewed or pruned permissions",
+                    "Thinks least privilege is just a compliance checkbox"
+                ]
+            }
+        ]
+    },
+    {
+        "id": "perf",
+        "category": "Performance",
+        "icon": "Zap",
+        "color": "#3b82f6",
+        "items": [
+            {
+                "id": "caching-strategy",
+                "label": "Caching strategy",
+                "question": "Where would you add caching in a web application stack?",
+                "answer": "Browser: Cache-Control headers for static assets (JS, CSS, images) — long max-age with content hashing. CDN: global static content and SSG pages at the edge. Server: Redis or Memcached for expensive DB queries or computed results. Application layer: memoization for repeated computed values within a request. The hard part is cache invalidation — always define TTL and an invalidation strategy before caching anything.",
+                "strongSignals": [
+                    "Layers caching at browser, CDN, server, and application levels",
+                    "Thinks about cache invalidation before caching",
+                    "Knows stale-while-revalidate for CDN edge caching",
+                    "Has debugged a stale cache issue in production"
+                ],
+                "redFlags": [
+                    "Caches everything with no invalidation plan",
+                    "Only knows browser cache — no server-side caching experience",
+                    "Cannot explain how CDN caching differs from browser caching"
+                ]
+            },
+            {
+                "id": "lighthouse-metrics",
+                "label": "Lighthouse metrics",
+                "question": "What are the Core Web Vitals and what are the target thresholds?",
+                "answer": "LCP (Largest Contentful Paint): under 2.5 seconds — measures loading speed. CLS (Cumulative Layout Shift): under 0.1 — measures visual stability. INP (Interaction to Next Paint): under 200ms — measures responsiveness. TBT (Total Blocking Time): under 200ms — proxy for interactivity during load. These are real user experience metrics, not just speed scores.",
+                "strongSignals": [
+                    "Names all three Core Web Vitals with correct thresholds",
+                    "Understands what each metric actually measures",
+                    "Has used Lighthouse or PageSpeed Insights on a real project",
+                    "Has improved a CWV score with a specific fix"
+                ],
+                "redFlags": [
+                    "Only knows 'performance score' — not the individual metrics",
+                    "Does not know what CLS stands for",
+                    "Has never run Lighthouse on their own projects"
+                ]
+            },
+            {
+                "id": "ttfb-optimization",
+                "label": "TTFB optimization",
+                "question": "How do you reduce Time to First Byte for a web application?",
+                "answer": "Move compute closer to the user — CDN edge functions, server regions co-located with users. Cache responses at the CDN layer to skip origin entirely. Optimize the DB query that blocks the first response. Reduce server startup time. Enable HTTP/2 or HTTP/3 for multiplexing. Use streaming SSR so the browser can start rendering before the full response finishes.",
+                "strongSignals": [
+                    "Identifies the DB query as a common TTFB culprit",
+                    "Knows edge computing reduces network latency",
+                    "Mentions streaming SSR as a TTFB win",
+                    "Has measured TTFB before and after an optimization"
+                ],
+                "redFlags": [
+                    "Only knows to 'optimize images' for TTFB",
+                    "Does not know that TTFB is a server-side metric",
+                    "Has never checked TTFB in browser devtools"
+                ]
+            },
+            {
+                "id": "bottleneck-analysis",
+                "label": "Bottleneck analysis",
+                "question": "How do you find the bottleneck in a slow API endpoint?",
+                "answer": "Add structured timing logs at each layer — auth, validation, DB query, external API call, serialization — with timestamps. Check the slow query log. Use an APM tool (Datadog, New Relic, Sentry Profiling) to see flame graphs. Look at p99 latency, not just the average — averages hide tail latency. Identify the single slowest step and fix that first.",
+                "strongSignals": [
+                    "Instruments each layer, does not guess which is slow",
+                    "Looks at p99, not average — knows averages lie",
+                    "Has used an APM tool in production",
+                    "Fixes the worst bottleneck first — not the easiest"
+                ],
+                "redFlags": [
+                    "Optimizes by feel without measuring",
+                    "Only looks at average response time",
+                    "Has no APM or structured logging in their services"
+                ]
+            }
+        ]
+    },
+    {
+        "id": "test",
+        "category": "Testing",
+        "icon": "Beaker",
+        "color": "#6366f1",
+        "items": [
+            {
+                "id": "unit-testing",
+                "label": "Unit testing",
+                "question": "What makes a good unit test?",
+                "answer": "Tests one specific behavior, not one function. Uses a descriptive name that reads like a sentence: 'should return 401 when the token is expired'. Follows arrange-act-assert structure. Is independent — shares no state with other tests. Is fast — no real DB, no real network. Tests the contract (inputs and outputs), not the internal implementation. Fails for one clear reason.",
+                "strongSignals": [
+                    "Names tests as behavior descriptions, not function names",
+                    "Knows the arrange-act-assert pattern",
+                    "Mocks external dependencies — DB, network, time",
+                    "Tests edge cases — null, empty, boundary values"
+                ],
+                "redFlags": [
+                    "Unit tests that call a real database",
+                    "Test names like 'test1' or the function name only",
+                    "Tests that only verify the happy path"
+                ]
+            },
+            {
+                "id": "integration-testing",
+                "label": "Integration testing",
+                "question": "What is the difference between a unit test and an integration test?",
+                "answer": "Unit test: tests one function or module in isolation with all dependencies mocked. Fast, precise, easy to write. Integration test: tests how multiple real parts work together — API handler + real DB, service + real external API. Slower, but catches contract bugs and wiring bugs that unit tests cannot. You need both: unit tests for logic, integration tests for boundaries.",
+                "strongSignals": [
+                    "Clearly explains isolation vs integration",
+                    "Knows integration tests catch wiring bugs unit tests miss",
+                    "Has used testcontainers or a test DB for integration tests",
+                    "Uses supertest or similar to test HTTP layer end-to-end"
+                ],
+                "redFlags": [
+                    "Cannot explain why you would need both types",
+                    "Calls a test that hits a real DB a 'unit test'",
+                    "Has only ever written one type of test"
+                ]
+            },
+            {
+                "id": "smoke-tests",
+                "label": "Smoke tests",
+                "question": "What are smoke tests, and when do you run them?",
+                "answer": "A minimal set of tests that verify the most critical paths are alive after a deploy — login works, homepage loads, primary APIs respond with 200, core user flow does not 500. Run immediately after every deploy, before routing production traffic. Fail fast, rollback fast. Smoke tests should complete in under 2 minutes — they are not comprehensive, they are a pulse check.",
+                "strongSignals": [
+                    "Keeps smoke tests minimal and fast — not a full regression suite",
+                    "Runs them automatically on every deploy before traffic switches",
+                    "Has a rollback trigger tied to smoke test failure",
+                    "Knows the difference between smoke tests and regression tests"
+                ],
+                "redFlags": [
+                    "Has no post-deploy verification — just deploys and hopes",
+                    "Smoke tests that take 20 minutes to run",
+                    "Does not know what a smoke test is"
+                ]
+            },
+            {
+                "id": "regression-strategy",
+                "label": "Regression strategy",
+                "question": "How do you prevent the same bug from happening twice?",
+                "answer": "Write a failing test that reproduces the bug before fixing it. Fix the code. Confirm the test passes. Keep the test in the suite permanently — it now guards that path. For production bugs, add a regression entry to your tracking log. If a class of bug repeats, look at the systemic cause — the process broke, not just the code.",
+                "strongSignals": [
+                    "Writes the test first — red, then green",
+                    "Has a test that documents a real bug they fixed",
+                    "Looks for systemic causes, not just patches",
+                    "Keeps a regression log and reviews it periodically"
+                ],
+                "redFlags": [
+                    "Fixes the bug, ships, moves on — no test added",
+                    "Same class of bug appears multiple times in their projects",
+                    "Does not know what a regression test is"
+                ]
+            }
+        ]
+    },
+    {
+        "id": "infra",
+        "category": "Infrastructure",
+        "icon": "Cloud",
+        "color": "#a855f7",
+        "items": [
+            {
+                "id": "cloud-architecture",
+                "label": "Cloud architecture",
+                "question": "What is the difference between vertical and horizontal scaling?",
+                "answer": "Vertical (scale up): bigger server — more CPU, RAM. Simple to implement, no code changes needed, but has a ceiling and creates a single point of failure. Horizontal (scale out): more servers behind a load balancer. More resilient — losing one server does not lose the service. Cost-efficient at scale, but requires stateless services (no in-memory session state). Design for horizontal from the start.",
+                "strongSignals": [
+                    "Knows vertical scaling creates a single point of failure",
+                    "Understands stateless services are required for horizontal scaling",
+                    "Has used a load balancer in a real architecture",
+                    "Knows auto-scaling and when it triggers"
+                ],
+                "redFlags": [
+                    "Cannot explain why horizontal scaling needs stateless services",
+                    "Has only vertically scaled — 'we just upgraded the server'",
+                    "Confuses load balancing with CDN"
+                ]
+            },
+            {
+                "id": "environment-parity",
+                "label": "Environment parity",
+                "question": "Why should dev, staging, and production be as similar as possible?",
+                "answer": "Differences between environments cause bugs that only appear in production — 'it worked on my machine.' Use Docker to standardize the runtime. Use the same database engine and version. Use the same secrets management approach. Use feature flags for behavior that differs by environment rather than different code paths. The closer staging is to production, the more it catches before release.",
+                "strongSignals": [
+                    "Uses Docker to eliminate 'it works on my machine' issues",
+                    "Has been burned by an environment difference in production",
+                    "Knows database version differences can break queries",
+                    "Uses feature flags instead of environment-specific code branches"
+                ],
+                "redFlags": [
+                    "Staging uses a different DB engine than production",
+                    "Dev environment is entirely manual setup — no Docker",
+                    "Has no staging environment — deploys directly to production"
+                ]
+            },
+            {
+                "id": "observability",
+                "label": "Observability",
+                "question": "What is the difference between monitoring and observability?",
+                "answer": "Monitoring tells you when something is wrong — alerts fire, dashboards go red. Observability tells you why — via the three pillars: logs (what happened), metrics (how much and how fast), and distributed traces (which service caused the problem in a chain of calls). Good observability means you can debug a production issue you have never seen before, using only the telemetry you already have.",
+                "strongSignals": [
+                    "Names all three pillars: logs, metrics, traces",
+                    "Understands distributed tracing and what it solves",
+                    "Has set up structured logging (not console.log) in production",
+                    "Uses an APM or observability platform in real work"
+                ],
+                "redFlags": [
+                    "Thinks monitoring and observability are the same word",
+                    "Only logs to a file — no centralized log aggregation",
+                    "Has never used distributed tracing"
+                ]
+            },
+            {
+                "id": "prod-debugging",
+                "label": "Prod debugging",
+                "question": "How do you debug an issue that only happens in production?",
+                "answer": "Check logs and error rates in APM first — establish the timeline of when it started. Look at recent deploys. Reproduce with production-like data in staging if possible. Add targeted structured logging (not console.log) around the suspected area and deploy. Correlate logs via request ID. If it is intermittent, look at p99 latency spikes, not averages. Never guess — instrument and observe.",
+                "strongSignals": [
+                    "Checks logs and recent deploys before touching code",
+                    "Uses request IDs to correlate client errors with server logs",
+                    "Adds structured logging, not console.log",
+                    "Has successfully debugged a production-only issue"
+                ],
+                "redFlags": [
+                    "Makes code changes in production to debug",
+                    "Has no structured logging or request ID correlation",
+                    "Cannot reproduce or isolate production-only bugs"
+                ]
+            }
+        ]
+    },
+    {
+        "id": "deploy",
+        "category": "Deployment",
+        "icon": "Rocket",
+        "color": "#ec4899",
+        "items": [
+            {
+                "id": "ci-cd-pipelines",
+                "label": "CI/CD pipelines",
+                "question": "What does your ideal CI/CD pipeline look like?",
+                "answer": "Code push triggers: lint and type-check → unit tests → build → integration tests → deploy to staging → smoke tests → deploy to production → smoke tests. Automated at every step with clear gates — a failure stops the pipeline and notifies the team. Fast (under 10 minutes total). Deployed via infrastructure-as-code, not manual console clicks.",
+                "strongSignals": [
+                    "Has the full sequence of stages correct",
+                    "Knows smoke tests run before and after the final deploy",
+                    "Keeps the pipeline under 10 minutes — long pipelines get bypassed",
+                    "Has built or maintained a real CI/CD pipeline"
+                ],
+                "redFlags": [
+                    "CI/CD = 'just runs tests'",
+                    "Manual deploys from a developer's laptop",
+                    "No staging environment in the pipeline"
+                ]
+            },
+            {
+                "id": "rollback-strategy",
+                "label": "Rollback strategy",
+                "question": "What is your strategy when a deploy goes bad?",
+                "answer": "Detect fast — smoke tests and error rate monitors. Rollback to the last known-good artifact immediately — do not try to fix forward under production pressure. Rolling back should take under 5 minutes and be a one-button action. After rollback: investigate in staging, communicate status to stakeholders, document the incident. Feature flags reduce rollback scope — you can toggle a feature off without redeploying.",
+                "strongSignals": [
+                    "Rollback is a one-button action, not a manual process",
+                    "Rolls back first, investigates after — not the other way around",
+                    "Uses feature flags to decouple deploys from releases",
+                    "Has actually executed a rollback under pressure"
+                ],
+                "redFlags": [
+                    "Has no rollback plan — only forward fixes",
+                    "Rollback takes more than 30 minutes",
+                    "Tries to hotfix in production before reverting"
+                ]
+            },
+            {
+                "id": "zero-downtime-deploys",
+                "label": "Zero-downtime deploys",
+                "question": "How do you deploy a new version without taking the site down?",
+                "answer": "Three patterns: Blue-Green — run two identical environments, switch the load balancer from blue to green, keep blue as instant rollback. Rolling — replace instances one at a time behind the load balancer; requires both versions to handle traffic simultaneously. Canary — route a small percentage (1-5%) of traffic to the new version first, monitor error rates, gradually increase. All require health checks and graceful shutdown handling.",
+                "strongSignals": [
+                    "Can name all three patterns and their tradeoffs",
+                    "Knows canary requires both versions to coexist temporarily",
+                    "Understands DB migration compatibility with zero-downtime deploys",
+                    "Has implemented at least one pattern on a real project"
+                ],
+                "redFlags": [
+                    "Zero-downtime = 'deploy at 3am'",
+                    "Cannot name any deployment pattern",
+                    "Has never thought about what happens during a deploy"
+                ]
+            },
+            {
+                "id": "release-validation",
+                "label": "Release validation",
+                "question": "How do you verify a release is healthy after deploying to production?",
+                "answer": "Immediately run smoke tests against production. Watch the error rate dashboard for 15 minutes — it should stay flat. Monitor p99 latency — it should not increase. Check key business metrics (orders placed, sign-ups, checkout completions). Keep the rollback plan staged and ready. Only declare the release healthy after 30 minutes of clean metrics.",
+                "strongSignals": [
+                    "Validates with real metrics, not just 'it loaded'",
+                    "Watches for 15-30 minutes, not just the first 60 seconds",
+                    "Tracks business metrics alongside technical metrics",
+                    "Has the rollback staged and ready during the watch window"
+                ],
+                "redFlags": [
+                    "Validation = checking the homepage loads once",
+                    "Declares success immediately and closes the laptop",
+                    "Has no dashboards to check post-deploy"
+                ]
+            }
+        ]
+    },
+    {
+        "id": "tools",
+        "category": "Tooling",
+        "icon": "Wrench",
+        "color": "#f43f5e",
+        "items": [
+            {
+                "id": "tool-selection",
+                "label": "Tool selection",
+                "question": "How do you decide whether to add a new library or dependency?",
+                "answer": "Ask: Is it actively maintained with recent releases? Does it have TypeScript support? What is the bundle size impact? Does it solve a problem I cannot solve simply without it? How many transitive dependencies does it add? Every dependency is a supply chain risk, a CVE surface, and a maintenance burden. Fewer dependencies is a feature. If the library is small enough, copy the relevant part instead.",
+                "strongSignals": [
+                    "Checks maintenance status and last release date",
+                    "Measures bundle size before and after",
+                    "Considers supply chain risk — has heard of log4shell or xz-utils",
+                    "Questions whether a dependency is needed at all"
+                ],
+                "redFlags": [
+                    "Installs any library without checking its maintenance status",
+                    "Has never looked at a dependency's transitive tree",
+                    "Thinks more dependencies = more capable project"
+                ]
+            },
+            {
+                "id": "automation",
+                "label": "Automation",
+                "question": "What manual tasks do you automate first on a new project?",
+                "answer": "Linting and formatting on commit — Husky + ESLint + Prettier so no human reviews style. Tests and build in CI on every PR. Dependency vulnerability scanning (Dependabot, Snyk). Deployment via CI pipeline — no manual SSH deploys. Release changelogs from conventional commits. Rule: if you do it manually more than twice a week, automate it.",
+                "strongSignals": [
+                    "Has Husky pre-commit hooks running lint and tests locally",
+                    "CI runs on every PR — not just on main",
+                    "Dependency scanning is automated, not ad-hoc",
+                    "Deployment requires zero manual steps"
+                ],
+                "redFlags": [
+                    "Deploys manually from the terminal — no CI",
+                    "Formatting is a PR comment discussion, not automated",
+                    "Has never set up Husky or pre-commit hooks"
+                ]
+            },
+            {
+                "id": "debugging",
+                "label": "Debugging",
+                "question": "Walk me through how you debug a bug you have never seen before.",
+                "answer": "Reproduce it reliably first — without reproducible steps it cannot be fixed. Read the full error message and stack trace, top to bottom. Form a hypothesis about the root cause. Narrow it down: binary search through code, add targeted logging, isolate the data that triggers it. Fix the root cause, not the symptom. Add a test so it cannot regress. If stuck after 30 minutes, explain it out loud or ask for fresh eyes.",
+                "strongSignals": [
+                    "Establishes reliable reproduction before touching code",
+                    "Reads the full stack trace — does not just google the first line",
+                    "Fixes root cause — not the symptom",
+                    "Adds a test after the fix"
+                ],
+                "redFlags": [
+                    "Googles the error without reading it first",
+                    "Cannot reproduce the bug but ships a fix anyway",
+                    "Fixes the symptom and considers it done"
+                ]
+            },
+            {
+                "id": "workflow-efficiency",
+                "label": "Workflow efficiency",
+                "question": "What does your local development workflow look like?",
+                "answer": "Fast feedback loop: hot reload, TypeScript type errors in the editor (not just at build time), local environment matching production via Docker. Use short-lived branches with small PRs — easier to review, faster to merge. Keep a session TODO list to stay focused. Know your editor deeply — keyboard shortcuts, multi-cursor, quick file navigation. A fast dev workflow compounds over months.",
+                "strongSignals": [
+                    "Has TypeScript errors in the editor, not just at build time",
+                    "Ships small PRs — describes how they slice work",
+                    "Has invested in learning their editor's power features",
+                    "Local environment matches production — uses Docker"
+                ],
+                "redFlags": [
+                    "Large PRs that take days to review",
+                    "Only sees TypeScript errors at build time",
+                    "No local hot reload — restarts server manually after every change"
+                ]
+            }
+        ]
+    },
+    {
+        "id": "growth",
+        "category": "Growth",
+        "icon": "TrendingUp",
+        "color": "#fb923c",
+        "items": [
+            {
+                "id": "learning-mindset",
+                "label": "Learning mindset",
+                "question": "How do you stay current with technology changes?",
+                "answer": "Follow engineers at the frontier and read their writing — not just their tweets, but their long-form posts and RFCs. Build small side projects with new technology before adopting it at work. Read one spec or changelog per week. Attend or watch 2-3 conference talks per month. Teach what you learn — writing and explaining force clarity that reading alone does not. Learn when to wait for hype to settle versus when to move early.",
+                "strongSignals": [
+                    "Has a specific learning habit they can describe",
+                    "Builds side projects to validate new tech before recommending it",
+                    "Teaches — writes, presents, or mentors to solidify learning",
+                    "Can cite something specific they learned in the last month"
+                ],
+                "redFlags": [
+                    "Learning = watching YouTube tutorials passively",
+                    "Cannot name a technology they explored recently",
+                    "Chases every new framework — no depth"
+                ]
+            },
+            {
+                "id": "technical-depth",
+                "label": "Technical depth",
+                "question": "How do you decide when to go deep versus stay broad on a technology?",
+                "answer": "Go deep on what you use every day — your primary language, your main framework, your database. Depth enables you to debug what others cannot and make better design decisions. Stay broad on adjacent areas to know when to reach for them. The right balance: be T-shaped — deep in one or two areas, broad enough elsewhere to collaborate and evaluate. Breadth without depth makes you a tourist; depth without breadth makes you a bottleneck.",
+                "strongSignals": [
+                    "Has a clear 'deep' area and can demonstrate it",
+                    "Uses breadth to recognize when something outside their depth is needed",
+                    "Has gone deep enough to find undocumented behavior or edge cases",
+                    "Knows the internals of their primary tool, not just its API"
+                ],
+                "redFlags": [
+                    "Equally shallow on everything",
+                    "Cannot go past the docs — no first-principles understanding",
+                    "Has never debugged a framework or library they use by reading its source"
+                ]
+            },
+            {
+                "id": "ownership-mentality",
+                "label": "Ownership mentality",
+                "question": "What does it mean to you to own a feature or a product area?",
+                "answer": "You see it through from design to deploy to production monitoring. You proactively flag issues — you do not wait to be asked. You care about its performance, reliability, and user experience after it ships. You write the runbook. You are accountable for its outcomes, not just its completion. If it breaks at 2am, you feel the responsibility.",
+                "strongSignals": [
+                    "Has a concrete example of going beyond the ticket",
+                    "Monitors their features in production proactively",
+                    "Has caught a production issue before a user reported it",
+                    "Feels personal accountability, not just task completion"
+                ],
+                "redFlags": [
+                    "Done = PR merged — never thinks about it again",
+                    "Has never checked production error rates for something they built",
+                    "Waits for a bug to be assigned before acting"
+                ]
+            },
+            {
+                "id": "adaptability",
+                "label": "Adaptability",
+                "question": "Tell me about a time you had to learn something new quickly under pressure.",
+                "answer": "Look for: a specific technology or situation (not vague), a real timeline and constraint, concrete actions taken — docs read, experiments run, person asked. A result. And reflection: what worked, what they would do differently. Strong signal if they describe how they built enough confidence quickly to make good decisions, not just enough to copy-paste.",
+                "strongSignals": [
+                    "Gives a specific, real example — not a generic answer",
+                    "Describes their learning process step by step",
+                    "Delivered something working under the constraint",
+                    "Reflects on what they would do differently"
+                ],
+                "redFlags": [
+                    "Cannot give a specific example",
+                    "The answer is 'I googled it' — no process described",
+                    "Has never been in a situation requiring rapid new learning"
+                ]
+            }
+        ]
+    },
+    {
+        "id": "comm",
+        "category": "Communication",
+        "icon": "MessageSquare",
+        "color": "#ff6b6b",
+        "items": [
+            {
+                "id": "clear-explanations",
+                "label": "Clear explanations",
+                "question": "How would you explain a technical concept to a non-technical stakeholder?",
+                "answer": "Start with why it matters to them — impact on the product, users, or business — before explaining what it is. Use an analogy they can picture. Drop the jargon; if you must use a technical term, define it in one sentence. Stay at the highest level that answers their question. Check for understanding by asking them to repeat the key point back. Stop before you over-explain.",
+                "strongSignals": [
+                    "Leads with impact, not technology",
+                    "Uses a concrete analogy — can demonstrate it live",
+                    "Checks understanding — does not just broadcast",
+                    "Can adjust depth based on the audience's reaction"
+                ],
+                "redFlags": [
+                    "Dives into implementation details immediately",
+                    "Cannot explain their work without technical jargon",
+                    "Talks at people rather than with them"
+                ]
+            },
+            {
+                "id": "tradeoff-discussion",
+                "label": "Tradeoff discussion",
+                "question": "Walk me through a technical tradeoff you had to navigate on a real project.",
+                "answer": "Look for: two clearly defined options. Data or reasoning used to evaluate them. An explicit acknowledgment of the downside of the choice made. A clear decision with rationale. Strong signal: they say 'we chose X, the tradeoff was Y, and we mitigated it by doing Z.' Red flag: they describe only the winning option with no downside.",
+                "strongSignals": [
+                    "Names both options clearly with specific constraints",
+                    "Acknowledges the downside of the choice made",
+                    "Explains how they mitigated or accepted the tradeoff",
+                    "Can state what would change their decision in hindsight"
+                ],
+                "redFlags": [
+                    "Presents only the winning option — no real tradeoff",
+                    "Cannot recall a technical decision they influenced",
+                    "Tradeoff = 'it was faster so we chose it' — no depth"
+                ]
+            },
+            {
+                "id": "direct-feedback",
+                "label": "Direct feedback",
+                "question": "How do you give constructive feedback during a code review?",
+                "answer": "Be specific and actionable: name the exact problem, explain why it matters in production or for maintainability, and suggest a concrete fix. Example: 'This query has no index on user_id — on a 1M-row table it will do a full scan. Add an index here.' Not: 'This looks slow.' Also praise patterns you want to reinforce. Ask questions rather than only asserting — 'Did you consider...' opens dialogue.",
+                "strongSignals": [
+                    "Feedback is specific — names the exact line and the exact problem",
+                    "Explains why, not just what to change",
+                    "Asks questions to open dialogue rather than only asserting",
+                    "Praises good patterns — not all feedback is corrective"
+                ],
+                "redFlags": [
+                    "Feedback is vague: 'clean this up', 'this is slow'",
+                    "Only leaves critical comments — never acknowledges good work",
+                    "Avoids difficult feedback to keep the peace"
+                ]
+            },
+            {
+                "id": "stakeholder-alignment",
+                "label": "Stakeholder alignment",
+                "question": "How do you keep stakeholders informed during a long project?",
+                "answer": "Weekly written status update — what is done, what is next, any blockers or risks. Flag risks as soon as they are identified — never save bad news for the weekly meeting. Use async writing over meetings when possible; meetings are expensive. Tailor the update to the audience: engineers get technical detail, leadership gets impact and timeline. A surprised stakeholder is a failed communication.",
+                "strongSignals": [
+                    "Has a regular async update cadence — not just ad-hoc",
+                    "Flags risks immediately — does not hold them for the next sync",
+                    "Tailors communication detail to the audience",
+                    "Prefers async writing over synchronous meetings for status"
+                ],
+                "redFlags": [
+                    "Communicates only when asked",
+                    "Surprises stakeholders with missed deadlines",
+                    "Only communicates in meetings — no written record"
+                ]
+            }
+        ]
+    }
+]
