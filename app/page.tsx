@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { ShieldCheck, Layout, Server, Users, Database, Lock, Zap, Beaker, Cloud, Rocket, Wrench, TrendingUp, MessageSquare, Download, X, FileText, Trash2, Clock, UserCheck, Network, Play, Pause, RotateCcw, Tag, Briefcase } from "lucide-react";
+import { ShieldCheck, Layout, Server, Users, Database, Lock, Zap, Beaker, Cloud, Rocket, Wrench, TrendingUp, MessageSquare, Download, X, FileText, Trash2, Clock, UserCheck, Network, Play, Pause, RotateCcw, Tag, Briefcase, SendHorizonal, Copy, Check } from "lucide-react";
+import Anthropic from "@anthropic-ai/sdk";
 
 import RUBRIC_SCHEMA from "./data.json";
 
@@ -195,7 +196,7 @@ type TopicEvidenceState = Record<
 
 type TopicKnowledgeState = Record<string, "know" | "dont">;
 
-type ConfettiShape = "rect" | "circle" | "star" | "ribbon" | "diamond";
+type ConfettiShape = "rect" | "circle" | "star" | "ribbon" | "diamond" | "heart";
 
 type ConfettiPiece = {
     id: number;
@@ -220,6 +221,7 @@ type ClickRipple = {
     id: number;
     x: number;
     y: number;
+    color?: string;
 };
 
 const COUNTRY_FLAG_BY_NAME: Record<string, string> = {
@@ -379,7 +381,7 @@ const IconMap: Record<string, any> = {
 };
 
 export default function PowerScorecard() {
-    const [candidate, setCandidate] = useState("Luz Alejandra");
+    const [candidate, setCandidate] = useState("John, Doe");
     const [interviewer, setInterviewer] = useState("Bunlong Heng");
     const [role, setRole] = useState("Backend Engineer");
     const [data, setData] = useState(INITIAL_SCHEMA);
@@ -403,6 +405,11 @@ export default function PowerScorecard() {
     const [focusedRowId, setFocusedRowId] = useState<string | null>(null);
     const [isStorageHydrated, setIsStorageHydrated] = useState(false);
     const [clickRipples, setClickRipples] = useState<ClickRipple[]>([]);
+    const [quizNotesOpen, setQuizNotesOpen] = useState(true);
+    const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+    const [summaryLoading, setSummaryLoading] = useState(false);
+    const [summaryText, setSummaryText] = useState("");
+    const [summaryCopied, setSummaryCopied] = useState(false);
     const clickAudioCtxRef = useRef<AudioContext | null>(null);
     const lastClickToneAtRef = useRef(0);
     const lastHoverToneAtRef = useRef(0);
@@ -801,44 +808,78 @@ export default function PowerScorecard() {
         const vw = typeof window !== "undefined" ? window.innerWidth : 1440;
         const vh = typeof window !== "undefined" ? window.innerHeight : 900;
         const isHuge = intensity === "huge";
-        const burstLifetime = lifetimeMs ?? (isHuge ? 4000 : 2600);
-        const pieceDurationBase = isHuge ? 2200 : 1200;
-        const pieceDurationRange = isHuge ? 1400 : 800;
-        const perCannon = isHuge ? 22 : 9;
-        // Heavily weighted to the modal accent color
-        const colors = [baseColor, baseColor, baseColor, baseColor, "#ffffff", "#fef08a"];
-        // Shape mix: mostly rects, sprinkled with dramatic shapes
-        const shapes: ConfettiShape[] = ["rect", "rect", "rect", "circle", "circle", "star", "ribbon", "diamond"];
+        const burstLifetime = lifetimeMs ?? (isHuge ? 7000 : 2600);
+        const pieceDurationBase = isHuge ? 3400 : 1200;
+        const pieceDurationRange = isHuge ? 2200 : 800;
         const baseId = Date.now() + Math.floor(Math.random() * 1000);
-        // 8 cannons: 4 corners + 4 edge-centers, each aimed inward
-        const cannons = [
-            { x: 0,    y: 0,    dxMin: vw*0.2,   dxMax: vw*0.88,  dyMin: vh*0.15,  dyMax: vh*0.88  }, // top-left
-            { x: vw,   y: 0,    dxMin: -vw*0.88, dxMax: -vw*0.2,  dyMin: vh*0.15,  dyMax: vh*0.88  }, // top-right
-            { x: 0,    y: vh,   dxMin: vw*0.2,   dxMax: vw*0.88,  dyMin: -vh*0.88, dyMax: -vh*0.15 }, // bottom-left
-            { x: vw,   y: vh,   dxMin: -vw*0.88, dxMax: -vw*0.2,  dyMin: -vh*0.88, dyMax: -vh*0.15 }, // bottom-right
-            { x: vw/2, y: 0,    dxMin: -vw*0.42, dxMax: vw*0.42,  dyMin: vh*0.18,  dyMax: vh*0.92  }, // top-center
-            { x: vw/2, y: vh,   dxMin: -vw*0.42, dxMax: vw*0.42,  dyMin: -vh*0.92, dyMax: -vh*0.18 }, // bottom-center
-            { x: 0,    y: vh/2, dxMin: vw*0.18,  dxMax: vw*0.92,  dyMin: -vh*0.42, dyMax: vh*0.42  }, // left-center
-            { x: vw,   y: vh/2, dxMin: -vw*0.92, dxMax: -vw*0.18, dyMin: -vh*0.42, dyMax: vh*0.42  }, // right-center
-        ];
-        cannons.forEach(({ x, y, dxMin, dxMax, dyMin, dyMax }, idx) => {
-            const cannonId = baseId + idx;
-            const pieces: ConfettiPiece[] = Array.from({ length: perCannon }).map((_, pieceIdx) => ({
-                id: pieceIdx,
-                dx: dxMin + Math.random() * (dxMax - dxMin),
-                dy: dyMin + Math.random() * (dyMax - dyMin),
-                rotate: (Math.random() - 0.5) * (isHuge ? 1800 : 1000),
-                size: (isHuge ? 10 : 7) + Math.random() * (isHuge ? 12 : 7),
-                duration: pieceDurationBase + Math.random() * pieceDurationRange,
-                delay: Math.random() * (isHuge ? 320 : 200),
-                color: colors[Math.floor(Math.random() * colors.length)],
-                shape: shapes[Math.floor(Math.random() * shapes.length)],
-            }));
-            setConfettiBursts((prev) => [...prev, { id: cannonId, x, y, pieces }]);
+
+        if (isHuge) {
+            // Heart formation: 80 pieces fly from center to positions tracing a heart curve
+            const cx = vw / 2;
+            const cy = vh * 0.44;
+            const heartScale = Math.min(vw, vh) * 0.028;
+            const totalPieces = 96;
+            const heartColors = [baseColor, baseColor, baseColor, baseColor, withAlpha(baseColor, 0.7), withAlpha(baseColor, 0.5), "#ffffff"];
+            const heartShapes: ConfettiShape[] = ["rect", "rect", "rect", "rect", "rect", "rect", "circle", "diamond"];
+            const pieces: ConfettiPiece[] = Array.from({ length: totalPieces }).map((_, i) => {
+                const t = (i / totalPieces) * 2 * Math.PI;
+                // Parametric heart equations
+                const hx = 16 * Math.pow(Math.sin(t), 3);
+                const hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+                // Negate hy so heart points down (CSS y increases downward)
+                const scatter = heartScale * 3.2;
+                const dx = hx * heartScale + (Math.random() - 0.5) * scatter;
+                const dy = -hy * heartScale + (Math.random() - 0.5) * scatter;
+                return {
+                    id: i,
+                    dx,
+                    dy,
+                    rotate: (Math.random() - 0.5) * 360,
+                    size: 10 + Math.random() * 10,
+                    duration: pieceDurationBase + Math.random() * pieceDurationRange,
+                    delay: Math.random() * 360,
+                    color: heartColors[Math.floor(Math.random() * heartColors.length)],
+                    shape: heartShapes[Math.floor(Math.random() * heartShapes.length)],
+                };
+            });
+            setConfettiBursts((prev) => [...prev, { id: baseId, x: cx, y: cy, pieces }]);
             setTimeout(() => {
-                setConfettiBursts((prev) => prev.filter((b) => b.id !== cannonId));
+                setConfettiBursts((prev) => prev.filter((b) => b.id !== baseId));
             }, burstLifetime);
-        });
+        } else {
+            // Normal mode: 8 cannons from corners/edges
+            const perCannon = 9;
+            const colors = [baseColor, baseColor, baseColor, baseColor, "#ffffff", "#fef08a"];
+            const shapes: ConfettiShape[] = ["rect", "rect", "rect", "circle", "circle", "star", "ribbon", "diamond"];
+            const cannons = [
+                { x: 0,    y: 0,    dxMin: vw*0.2,   dxMax: vw*0.88,  dyMin: vh*0.15,  dyMax: vh*0.88  },
+                { x: vw,   y: 0,    dxMin: -vw*0.88, dxMax: -vw*0.2,  dyMin: vh*0.15,  dyMax: vh*0.88  },
+                { x: 0,    y: vh,   dxMin: vw*0.2,   dxMax: vw*0.88,  dyMin: -vh*0.88, dyMax: -vh*0.15 },
+                { x: vw,   y: vh,   dxMin: -vw*0.88, dxMax: -vw*0.2,  dyMin: -vh*0.88, dyMax: -vh*0.15 },
+                { x: vw/2, y: 0,    dxMin: -vw*0.42, dxMax: vw*0.42,  dyMin: vh*0.18,  dyMax: vh*0.92  },
+                { x: vw/2, y: vh,   dxMin: -vw*0.42, dxMax: vw*0.42,  dyMin: -vh*0.92, dyMax: -vh*0.18 },
+                { x: 0,    y: vh/2, dxMin: vw*0.18,  dxMax: vw*0.92,  dyMin: -vh*0.42, dyMax: vh*0.42  },
+                { x: vw,   y: vh/2, dxMin: -vw*0.92, dxMax: -vw*0.18, dyMin: -vh*0.42, dyMax: vh*0.42  },
+            ];
+            cannons.forEach(({ x, y, dxMin, dxMax, dyMin, dyMax }, idx) => {
+                const cannonId = baseId + idx;
+                const pieces: ConfettiPiece[] = Array.from({ length: perCannon }).map((_, pieceIdx) => ({
+                    id: pieceIdx,
+                    dx: dxMin + Math.random() * (dxMax - dxMin),
+                    dy: dyMin + Math.random() * (dyMax - dyMin),
+                    rotate: (Math.random() - 0.5) * 1000,
+                    size: 7 + Math.random() * 7,
+                    duration: pieceDurationBase + Math.random() * pieceDurationRange,
+                    delay: Math.random() * 200,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    shape: shapes[Math.floor(Math.random() * shapes.length)],
+                }));
+                setConfettiBursts((prev) => [...prev, { id: cannonId, x, y, pieces }]);
+                setTimeout(() => {
+                    setConfettiBursts((prev) => prev.filter((b) => b.id !== cannonId));
+                }, burstLifetime);
+            });
+        }
     }, []);
 
     const setTopicKnowledgeStatus = (status: "know" | "dont") => {
@@ -870,18 +911,62 @@ export default function PowerScorecard() {
         setToolTimerTenths(TOOL_TIMER_START_TENTHS);
     };
 
-    const spawnClickRipple = (x: number, y: number) => {
+    const generateRecruiterSummary = () => {
+        // Build topic knowledge lists
+        const knewTopics: string[] = [];
+        const didntKnowTopics: string[] = [];
+        data.forEach((cat) => {
+            getVisibleItems(cat).forEach((item) => {
+                const rubricTopic = resolveRubricTopic(rubricLookup, cat, item);
+                const topicId = rubricTopic?.id || item;
+                const topicKey = getTopicEvidenceKey(String(cat.id || cat.category || ""), topicId);
+                const knowledge = topicKnowledge[topicKey];
+                if (knowledge === "know") knewTopics.push(`${cat.category} → ${item}`);
+                else if (knowledge === "dont") didntKnowTopics.push(`${cat.category} → ${item}`);
+            });
+        });
+
+        const categoryScores = data.map((cat) => `${cat.category}: ${scores[cat.id] ?? 3}/5`).join("\n");
+        const pct = Number(totalStats.pct);
+        const tier = pct < 60 ? "Not Recommended" : pct < 80 ? "Maybe / Conditional" : "Strong Yes";
+
+        const prompt = `You are a technical interview assistant helping write a quick recruiter update. Write ONE short paragraph (3-5 sentences) about this candidate. Focus on whether they're a good fit and why — specifically what gaps or weak areas drive the recommendation. Do NOT mention any numeric scores or percentages. Do NOT restate the job title. Write naturally and conversationally, like a colleague sharing a quick opinion. No bullet points, no lists, just flowing prose.
+
+Candidate: ${candidate || "Unknown"}
+Overall signal: ${tier}
+
+Category scores (for context only — do not quote numbers):
+${categoryScores}
+
+Topics the candidate KNEW:
+${knewTopics.length > 0 ? knewTopics.map((t) => `• ${t}`).join("\n") : "• (none marked)"}
+
+Topics the candidate DID NOT KNOW:
+${didntKnowTopics.length > 0 ? didntKnowTopics.map((t) => `• ${t}`).join("\n") : "• (none marked)"}
+
+Interviewer Notes:
+${notes.trim() || "(no notes)"}
+
+---
+Write the recruiter update paragraph now:`;
+
+        setSummaryText(prompt);
+        setSummaryLoading(false);
+        setIsSummaryOpen(true);
+    };
+
+    const spawnClickRipple = (x: number, y: number, color?: string) => {
         const id = Date.now() + Math.floor(Math.random() * 1000);
-        setClickRipples((prev) => [...prev, { id, x, y }]);
+        setClickRipples((prev) => [...prev, { id, x, y, color }]);
         window.setTimeout(() => {
             setClickRipples((prev) => prev.filter((ripple) => ripple.id !== id));
-        }, 560);
+        }, 800);
     };
 
     const handleInteractiveClick = (event: { clientX?: number; clientY?: number } | null) => {
         playUiClickSound();
         if (event && typeof event.clientX === "number" && typeof event.clientY === "number") {
-            spawnClickRipple(event.clientX, event.clientY);
+            spawnClickRipple(event.clientX, event.clientY, activeTopic?.categoryColor);
         }
     };
 
@@ -1069,7 +1154,11 @@ export default function PowerScorecard() {
             {clickRipples.length > 0 && (
                 <div className="pointer-events-none fixed inset-0 z-[165] overflow-hidden">
                     {clickRipples.map((ripple) => (
-                        <span key={ripple.id} className="ui-click-ripple" style={{ left: `${ripple.x}px`, top: `${ripple.y}px` }} />
+                        <span
+                            key={ripple.id}
+                            className={ripple.color ? "ui-click-ripple ui-click-ripple-quiz" : "ui-click-ripple"}
+                            style={{ left: `${ripple.x}px`, top: `${ripple.y}px`, "--ripple-color": ripple.color } as React.CSSProperties}
+                        />
                     ))}
                 </div>
             )}
@@ -1295,6 +1384,15 @@ export default function PowerScorecard() {
                                     <Download size={13} />
                                 </button>
 
+                                <button
+                                    type="button"
+                                    onClick={() => { void generateRecruiterSummary(); }}
+                                    title="Generate recruiter update"
+                                    aria-label="Generate recruiter update"
+                                    className="w-9 h-9 rounded-lg border border-sky-400/35 text-sky-300/80 hover:border-sky-300/65 hover:text-sky-200 hover:bg-sky-500/12 transition-colors inline-flex items-center justify-center">
+                                    <SendHorizonal size={13} />
+                                </button>
+
                             </div>
                         </div>
                         {selectedNoteBadgeTags.length > 0 && (
@@ -1343,15 +1441,15 @@ export default function PowerScorecard() {
             </main>
 
             {activeTopic && (
-                <div className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setActiveTopic(null)}>
+                <div className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-sm flex items-center justify-center p-3 pb-[130px] overflow-y-auto" onClick={() => setActiveTopic(null)}>
                     <div
-                        className="w-full max-w-[94rem] max-h-[95vh] min-h-[74vh] overflow-y-auto bg-[#0b0b0b] rounded-2xl border-2 p-6 sm:p-7"
+                        className="w-full max-w-6xl bg-[#0b0b0b] rounded-2xl border-2 p-4 sm:p-5"
                         style={{ borderColor: activeTopic.categoryColor }}
                         onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-start justify-between gap-4">
                             <div>
-                                <div className="text-[10px] tracking-[0.14em] text-white/50">{activeTopic.categoryLabel}</div>
-                                <h2 className="text-lg sm:text-xl font-black tracking-tight mt-1" style={{ color: activeTopic.categoryColor }}>
+                                <div className="text-[9px] tracking-[0.14em] text-white/50">{activeTopic.categoryLabel}</div>
+                                <h2 className="text-base font-black tracking-tight mt-0.5" style={{ color: activeTopic.categoryColor }}>
                                     {activeTopic.topicLabel}
                                 </h2>
                             </div>
@@ -1409,13 +1507,13 @@ export default function PowerScorecard() {
                             <div className="relative grid grid-cols-1 sm:grid-cols-[1.42fr_1fr]">
                                 <div className="relative px-5 py-5 sm:pr-20" style={{ backgroundColor: withAlpha(activeTopic.categoryColor, 0.92) }}>
                                     <div className="text-[10px] tracking-[0.14em] text-black/70 font-black">Question</div>
-                                    <p className="mt-2 font-semibold leading-tight text-black whitespace-normal break-words" style={{ fontSize: "clamp(1.1rem, 1.9vw, 2rem)" }}>
+                                    <p className="mt-1 font-semibold leading-tight text-black whitespace-normal break-words" style={{ fontSize: "clamp(0.78rem, 1.1vw, 1.05rem)" }}>
                                         {activeTopic.followUp || activeTopic.expectation}
                                     </p>
                                 </div>
                                 <div className="px-5 py-5 sm:pl-14 bg-black/72 border-t sm:border-t-0 sm:border-l" style={{ borderColor: withAlpha(activeTopic.categoryColor, 0.42) }}>
-                                    <div className="text-[10px] tracking-[0.14em] text-white/65 font-black">Expected Answer</div>
-                                    <p className="mt-2 text-sm sm:text-base leading-relaxed text-white">{activeTopic.expectation}</p>
+                                    <div className="text-[8px] tracking-[0.14em] text-white/65 font-black">Expected Answer</div>
+                                    <p className="mt-1 text-[11px] leading-relaxed text-white">{activeTopic.expectation}</p>
                                 </div>
                                 <span
                                     aria-hidden="true"
@@ -1434,7 +1532,7 @@ export default function PowerScorecard() {
                             <button
                                 type="button"
                                 onClick={() => setTopicKnowledgeStatus("know")}
-                                className="relative overflow-hidden p-5 rounded-xl border text-left cursor-pointer transition-all"
+                                className="relative overflow-hidden p-3 rounded-xl border text-left cursor-pointer transition-all"
                                 style={{
                                     borderColor: activeTopicKnowledge === "know" ? withAlpha(activeTopic.categoryColor, 0.86) : withAlpha(activeTopic.categoryColor, 0.46),
                                     backgroundColor: activeTopicKnowledge === "know" ? withAlpha(activeTopic.categoryColor, 0.3) : withAlpha(activeTopic.categoryColor, 0.16),
@@ -1466,7 +1564,7 @@ export default function PowerScorecard() {
                                                         background: `linear-gradient(180deg, rgba(0,0,0,${blackDepth}) 0%, rgba(0,0,0,${blackDepthEnd}) 100%), radial-gradient(120% 180% at 50% 50%, ${withAlpha(activeTopic.categoryColor, glow)} 0%, rgba(0,0,0,0) 58%), linear-gradient(90deg, ${withAlpha(activeTopic.categoryColor, baseStart)} 0%, ${withAlpha(activeTopic.categoryColor, baseEnd)} 100%)`,
                                                         borderTop: idx === 0 ? "none" : `1px solid ${withAlpha(activeTopic.categoryColor, divider)}`,
                                                     }}>
-                                                    <span className="text-base sm:text-xl font-bold leading-snug text-white">{signal}</span>
+                                                    <span className="text-[11px] font-bold leading-snug text-white">{signal}</span>
                                                 </li>
                                             );
                                         })}
@@ -1478,7 +1576,7 @@ export default function PowerScorecard() {
                             <button
                                 type="button"
                                 onClick={() => setTopicKnowledgeStatus("dont")}
-                                className="relative overflow-hidden p-5 rounded-xl border text-left cursor-pointer transition-all"
+                                className="relative overflow-hidden p-3 rounded-xl border text-left cursor-pointer transition-all"
                                 style={{
                                     borderColor: activeTopicKnowledge === "dont" ? "rgba(212,212,216,0.72)" : "rgba(82,82,91,0.78)",
                                     backgroundColor: activeTopicKnowledge === "dont" ? "rgba(63,63,70,0.34)" : "rgba(39,39,42,0.4)",
@@ -1492,7 +1590,7 @@ export default function PowerScorecard() {
                                         {activeTopic.redFlags.map((flag, idx) => {
                                             return (
                                                 <li key={idx} className="rounded-md px-3 py-2 bg-zinc-900/35">
-                                                    <span className="text-base sm:text-lg font-medium leading-snug text-zinc-100">{flag}</span>
+                                                    <span className="text-[11px] font-medium leading-snug text-zinc-100">{flag}</span>
                                                 </li>
                                             );
                                         })}
@@ -1504,6 +1602,44 @@ export default function PowerScorecard() {
                         </div>
 
                     </div>
+                </div>
+            )}
+
+            {activeTopic && (
+                <div
+                    className="quiz-notes-panel fixed bottom-0 left-0 right-0 z-[125] overflow-hidden"
+                    style={{
+                        backgroundColor: activeTopic.categoryColor,
+                        boxShadow: `0 -4px 24px -4px ${withAlpha(activeTopic.categoryColor, 0.4)}`,
+                    }}>
+                    <button
+                        type="button"
+                        onClick={() => setQuizNotesOpen((p) => !p)}
+                        className="w-full flex items-center justify-between px-6 py-1.5 border-b"
+                        style={{ borderColor: "rgba(0,0,0,0.15)", backgroundColor: "rgba(0,0,0,0.1)" }}>
+                        <div className="flex items-center gap-2">
+                            <FileText size={10} className="text-black/65" />
+                            <span className="text-[9px] font-black tracking-[0.14em] text-black/70">NOTES</span>
+                            {notes.trim() === "" && <span className="text-[9px] text-black/35 font-normal ml-1">(empty)</span>}
+                        </div>
+                        <span className="text-black/45 text-[9px]">{quizNotesOpen ? "▾" : "▴"}</span>
+                    </button>
+                    {quizNotesOpen && (
+                        <div className="px-6 py-2">
+                            <textarea
+                                className="w-full bg-transparent border-none outline-none text-[11px] text-black placeholder:text-black/35 leading-relaxed font-mono resize-none"
+                                style={{ height: "88px" }}
+                                placeholder="Type your notes here…"
+                                value={notes}
+                                autoFocus
+                                onChange={(e) => {
+                                    const next = e.currentTarget.value;
+                                    setNotes(next);
+                                    persistState({ notes: next });
+                                }}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -1528,6 +1664,48 @@ export default function PowerScorecard() {
                                 Confirm
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {isSummaryOpen && (
+                <div className="fixed inset-0 z-[155] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setIsSummaryOpen(false)}>
+                    <div className="w-full max-w-2xl rounded-2xl border border-sky-400/25 bg-[#0b0b0b] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/8 bg-sky-500/8">
+                            <div className="flex items-center gap-3">
+                                <SendHorizonal size={13} className="text-sky-300" />
+                                <span className="text-[11px] font-black tracking-[0.14em] text-sky-200">PROMPT — paste into ChatGPT</span>
+                                {summaryText && (
+                                    <span className="text-[10px] text-white/35 font-mono">
+                                        ~{summaryText.split(/\s+/).filter(Boolean).length} words · ~{Math.ceil(summaryText.length / 4)} tokens
+                                    </span>
+                                )}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsSummaryOpen(false)}
+                                className="w-7 h-7 rounded-md border border-white/15 text-white/50 hover:text-white hover:bg-white/10 transition-colors inline-flex items-center justify-center">
+                                <X size={14} />
+                            </button>
+                        </div>
+                        <div className="px-5 py-4 max-h-[60vh] overflow-y-auto">
+                            <pre className="text-[11px] text-white/80 leading-relaxed font-mono whitespace-pre-wrap">{summaryText}</pre>
+                        </div>
+                        {summaryText && (
+                            <div className="px-5 pb-4 pt-2 border-t border-white/6 flex items-center justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        void navigator.clipboard.writeText(summaryText);
+                                        setSummaryCopied(true);
+                                        setTimeout(() => setSummaryCopied(false), 2000);
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-sky-400/30 text-sky-300 hover:bg-sky-500/12 transition-colors text-xs font-medium">
+                                    {summaryCopied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                                    {summaryCopied ? "Copied!" : "Copy prompt"}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -1666,6 +1844,32 @@ export default function PowerScorecard() {
                     {confettiBursts.map((burst) =>
                         burst.pieces.map((piece) => {
                             const s = piece.size;
+                            const baseStyle = {
+                                left: `${burst.x}px`,
+                                top: `${burst.y}px`,
+                                animationDuration: `${piece.duration}ms`,
+                                animationDelay: `${piece.delay}ms`,
+                                "--confetti-x": `${piece.dx}px`,
+                                "--confetti-y": `${piece.dy}px`,
+                                "--confetti-r": `${piece.rotate}deg`,
+                                "--confetti-glow": piece.color,
+                            } as React.CSSProperties;
+                            if (piece.shape === "heart") {
+                                return (
+                                    <span
+                                        key={`${burst.id}-${piece.id}`}
+                                        className="confetti-piece"
+                                        style={{
+                                            ...baseStyle,
+                                            fontSize: `${s * 1.7}px`,
+                                            lineHeight: "1",
+                                            color: piece.color,
+                                            textShadow: `0 0 10px ${piece.color}`,
+                                            boxShadow: "none",
+                                            backgroundColor: "transparent",
+                                        }}>♥</span>
+                                );
+                            }
                             const shapeStyle: React.CSSProperties =
                                 piece.shape === "circle"  ? { width: `${s}px`, height: `${s}px`, borderRadius: "50%" } :
                                 piece.shape === "star"    ? { width: `${s * 1.5}px`, height: `${s * 1.5}px`, clipPath: "polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)" } :
@@ -1676,18 +1880,7 @@ export default function PowerScorecard() {
                                 <span
                                     key={`${burst.id}-${piece.id}`}
                                     className="confetti-piece"
-                                    style={{
-                                        left: `${burst.x}px`,
-                                        top: `${burst.y}px`,
-                                        ...shapeStyle,
-                                        backgroundColor: piece.color,
-                                        animationDuration: `${piece.duration}ms`,
-                                        animationDelay: `${piece.delay}ms`,
-                                        "--confetti-x": `${piece.dx}px`,
-                                        "--confetti-y": `${piece.dy}px`,
-                                        "--confetti-r": `${piece.rotate}deg`,
-                                        "--confetti-glow": piece.color,
-                                    } as React.CSSProperties}
+                                    style={{ ...baseStyle, ...shapeStyle, backgroundColor: piece.color }}
                                 />
                             );
                         }),
@@ -1751,24 +1944,44 @@ export default function PowerScorecard() {
                 }
                 .ui-click-ripple {
                     position: fixed;
-                    width: 12px;
-                    height: 12px;
+                    width: 28px;
+                    height: 28px;
                     border-radius: 9999px;
-                    border: 1px solid rgba(255, 255, 255, 0.55);
-                    background: rgba(255, 255, 255, 0.07);
-                    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
-                    transform: translate(-50%, -50%) scale(0.35);
+                    border: 1.5px solid rgba(255, 255, 255, 0.65);
+                    background: rgba(255, 255, 255, 0.09);
+                    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15), 0 0 18px 2px rgba(255,255,255,0.08);
+                    transform: translate(-50%, -50%) scale(0.22);
                     opacity: 0;
-                    animation: ui-click-ripple-burst 560ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                    animation: ui-click-ripple-burst 680ms cubic-bezier(0.12, 1, 0.26, 1) forwards;
                 }
                 @keyframes ui-click-ripple-burst {
                     0% {
-                        opacity: 0.55;
-                        transform: translate(-50%, -50%) scale(0.35);
+                        opacity: 0.7;
+                        transform: translate(-50%, -50%) scale(0.22);
                     }
                     100% {
                         opacity: 0;
-                        transform: translate(-50%, -50%) scale(9.5);
+                        transform: translate(-50%, -50%) scale(16);
+                    }
+                }
+                .ui-click-ripple-quiz {
+                    width: 44px;
+                    height: 44px;
+                    border-color: var(--ripple-color, rgba(255,255,255,0.65));
+                    border-width: 2px;
+                    background: transparent;
+                    box-shadow: 0 0 0 1px color-mix(in srgb, var(--ripple-color, white) 30%, transparent), 0 0 28px 4px color-mix(in srgb, var(--ripple-color, white) 22%, transparent);
+                    animation-duration: 820ms;
+                    animation-name: ui-click-ripple-burst-quiz;
+                }
+                @keyframes ui-click-ripple-burst-quiz {
+                    0% {
+                        opacity: 0.85;
+                        transform: translate(-50%, -50%) scale(0.18);
+                    }
+                    100% {
+                        opacity: 0;
+                        transform: translate(-50%, -50%) scale(22);
                     }
                 }
                 .topic-close-alert {
