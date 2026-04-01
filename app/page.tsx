@@ -741,10 +741,13 @@ export default function PowerScorecard() {
         const resetScores = buildDefaultScores(data);
         const clearedEvidence: TopicEvidenceState = {};
         const clearedKnowledge: TopicKnowledgeState = {};
+        setCandidate("");
+        setNotes("");
         setScores(resetScores);
         setTopicEvidence(clearedEvidence);
         setTopicKnowledge(clearedKnowledge);
-        persistState({ scores: resetScores, topicEvidence: clearedEvidence, topicKnowledge: clearedKnowledge });
+        setSelectedNoteBadges({});
+        persistState({ candidate: "", scores: resetScores, topicEvidence: clearedEvidence, topicKnowledge: clearedKnowledge, notes: "", noteBadges: {} });
         setIsResetConfirmOpen(false);
         setActiveTopic(null);
     };
@@ -1234,7 +1237,8 @@ Write the recruiter update paragraph now:`;
                             onClick={(e) => {
                                 handleInteractiveClick(e);
                                 setFocusedRowId(cat.id);
-                            }}>
+                            }}
+                            onDoubleClick={() => cycleRowTextureVariant()}>
                             <div className="w-48 px-5 py-2 flex items-center gap-3 shrink-0" style={rowStripStyle}>
                                 <Icon size={13} className="text-white row-icon-shake" />
                                 <h2 className="font-black text-[10px] tracking-tight text-white leading-none">{cat.category}</h2>
@@ -1352,16 +1356,6 @@ Write the recruiter update paragraph now:`;
                                     <MessageSquare size={13} />
                                 </button>
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        cycleRowTextureVariant();
-                                    }}
-                                    title={`Row texture: ${activeRowTextureVariant.label}`}
-                                    aria-label="Cycle row texture"
-                                    className="w-9 h-9 rounded-lg border border-white/20 text-white/85 hover:border-amber-300/45 hover:text-amber-200 hover:bg-amber-500/12 transition-colors inline-flex items-center justify-center">
-                                    <RotateCcw size={13} />
-                                </button>
 
                                 <button
                                     type="button"
@@ -1647,9 +1641,9 @@ Write the recruiter update paragraph now:`;
             {isResetConfirmOpen && (
                 <div className="fixed inset-0 z-[150] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setIsResetConfirmOpen(false)}>
                     <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-[#0b0b0b] p-5" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="text-sm font-black tracking-[0.14em] text-white mb-2">Reset ratings?</h3>
+                        <h3 className="text-sm font-black tracking-[0.14em] text-white mb-2">Reset scorecard?</h3>
                         <p className="text-xs text-white/65 leading-relaxed">
-                            This will clear all row scores and topic yes/no badge states.
+                            This will clear everything — candidate name, scores, notes, and badges — ready for the next interview.
                         </p>
                         <div className="mt-4 flex items-center justify-end gap-2">
                             <button
