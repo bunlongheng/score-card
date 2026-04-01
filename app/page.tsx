@@ -1675,7 +1675,7 @@ Write the recruiter update paragraph now:`;
                         <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/8 bg-sky-500/8">
                             <div className="flex items-center gap-3">
                                 <SendHorizonal size={13} className="text-sky-300" />
-                                <span className="text-[11px] font-black tracking-[0.14em] text-sky-200">PROMPT — paste into ChatGPT</span>
+                                <span className="text-[11px] font-black tracking-[0.14em] text-sky-200">PROMPT — paste into AI</span>
                                 {summaryText && (
                                     <span className="text-[10px] text-white/35 font-mono">
                                         ~{summaryText.split(/\s+/).filter(Boolean).length} words · ~{Math.ceil(summaryText.length / 4)} tokens
