@@ -920,17 +920,18 @@ export default function PowerScorecard() {
                 const rubricTopic = resolveRubricTopic(rubricLookup, cat, item);
                 const topicId = rubricTopic?.id || item;
                 const topicKey = getTopicEvidenceKey(String(cat.id || cat.category || ""), topicId);
-                const knowledge = topicKnowledge[topicKey];
+                const knowledge = getTopicKnowledge(topicKey);
                 if (knowledge === "know") knewTopics.push(`${cat.category} → ${item}`);
                 else if (knowledge === "dont") didntKnowTopics.push(`${cat.category} → ${item}`);
             });
         });
 
         const categoryScores = data.map((cat) => `${cat.category}: ${scores[cat.id] ?? 3}/5`).join("\n");
-        const pct = Number(totalStats.pct);
-        const tier = pct < 60 ? "Not Recommended" : pct < 80 ? "Maybe / Conditional" : "Strong Yes";
+        const practicalMax = data.length * 4;
+        const practicalPct = practicalMax > 0 ? Math.min(100, (totalStats.earned / practicalMax) * 100) : 0;
+        const tier = practicalPct < 60 ? "No" : practicalPct < 80 ? "Maybe / Conditional" : "Yes";
 
-        const prompt = `You are a technical interview assistant helping write a quick recruiter update. Write ONE short paragraph (3-5 sentences) about this candidate. Focus on whether they're a good fit and why — specifically what gaps or weak areas drive the recommendation. Do NOT mention any numeric scores or percentages. Do NOT restate the job title. Write naturally and conversationally, like a colleague sharing a quick opinion. No bullet points, no lists, just flowing prose.
+        const prompt = `You are a technical interview assistant helping write a quick recruiter update. Write ONE short paragraph (3-5 sentences) about this candidate. Focus on whether they're a good fit and why — specifically what gaps or weak areas drive the recommendation. Do NOT mention any numeric scores or percentages. Do NOT restate the job title. Write naturally and conversationally, like a colleague sharing a quick opinion. No bullet points, no lists, just flowing prose. If the candidate passed or is a possible pass, end with: "Could you help set up next steps? I'm available every day at 10:30 AM."
 
 Candidate: ${candidate || "Unknown"}
 Overall signal: ${tier}
