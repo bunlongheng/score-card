@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import VisitorTracker from "@/components/VisitorTracker";
+import SwRegister from "./sw-register";
 
 export const viewport: Viewport = {
     width: "device-width",
@@ -12,6 +13,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
     title: "Score Card",
     description: "Interview score card — structured rubric for technical interviews",
+    manifest: "/manifest.webmanifest",
     icons: {
         icon: "/favicon.svg",
         shortcut: "/favicon.svg",
@@ -30,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <body className="antialiased bg-black text-white">
                 <VisitorTracker />
                 {children}
+                <SwRegister />
             </body>
         </html>
     );
