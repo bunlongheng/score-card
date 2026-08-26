@@ -1,4 +1,14 @@
 <div align="center">
+  <img src="docs/icon.png" alt="Score Card" width="96" height="96" />
+  <h1>Score Card</h1>
+  <p><em>Rubric-driven interview scorecard that builds a ready-to-paste AI prompt for the recruiter update</em></p>
+  <p><a href="https://score-card-bheng.vercel.app">Live</a> &middot; <a href="https://github.com/bunlongheng/score-card">Repo</a> &middot; <a href="https://bunlongheng.com/projects?name=score-card">Portfolio</a></p>
+  <img src="docs/social-preview.png" alt="Score Card - preview" width="820" />
+</div>
+
+---
+
+<div align="center">
 
 # Score Card
 
